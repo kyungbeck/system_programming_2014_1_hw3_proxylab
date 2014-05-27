@@ -27,12 +27,9 @@ clean:
 	rm -f *.o *~ *.exe *.tar
 	rm -f $(PROGS)
 	rm -f proxy.log
-
 server:
-	./echoserver 15641
-
+	./echoserver 4190
 middle:
-	./proxy 15640
-
+	./proxy 25640
 client:
-	./echoclient localhost 15640
+	./echoclient localhost 25640

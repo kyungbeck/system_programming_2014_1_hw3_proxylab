@@ -24,6 +24,7 @@
 
 
  void proxy(int connfd, char *prefix);
+ void proxy2(int connfd, char *prefix) ;
 void *process_request(void* vargp);
 int open_clientfd_ts(char *hostname, int port, sem_t *mutexp);
 ssize_t Rio_readn_w(int fd, void *ptr, size_t nbytes);
@@ -84,7 +85,7 @@ void *proxy_thread(void *vargp)
 
     printf("Served by thread %u\n", (unsigned int) tid);
     sprintf(prefix, "Thread %u ", (unsigned int) tid);
-    proxy(connfd, prefix);
+    proxy2(connfd, prefix);
     Close(connfd);
     return NULL;
 }
@@ -101,7 +102,7 @@ void proxy(int connfd, char *prefix)
     int fdProxyToServer;
 
 
-    fdProxyToServer = Open_clientfd("localhost", 15641);
+    fdProxyToServer = Open_clientfd("localhost", 4190);
     Rio_readinitb(&rio2, fdProxyToServer);
 
 
@@ -111,9 +112,48 @@ void proxy(int connfd, char *prefix)
 	printf("%sreceived %d bytes (%d total)\n", prefix, (int) n, bytecnt);
 	
 	Rio_writen(fdProxyToServer, buf, strlen(buf));
+	fwrite("[C] ", strlen("[C] "), 1, fp); 
 	fwrite(buf, strlen(buf), 1, fp);
 	fflush(fp);
 	Rio_writen(connfd, buf, n);
+	fwrite("[S] ", strlen("[S] "), 1, fp); 
+	fwrite(buf, strlen(buf), 1, fp);
+	fflush(fp);
+    }
+    Close(fdProxyToServer);
+}
+
+
+void proxy2(int connfd, char *prefix) 
+{
+    size_t n,n2; 
+    char buf[MAXLINE], buf2[MAXLINE]; 
+    rio_t rio;
+    rio_t rio2;
+    int fdProxyToServer;
+
+
+    fdProxyToServer = Open_clientfd("localhost", 4190);
+    Rio_readinitb(&rio2, fdProxyToServer);
+    Rio_readinitb(&rio, connfd);
+
+    while (1)
+    {
+	n = Rio_readlineb(&rio, buf, MAXLINE); // data -> read 
+	if (n==0)
+		break;
+	fwrite("[C] ", strlen("[C] "), 1, fp); 
+	fwrite(buf, strlen(buf), 1, fp);
+	fflush(fp);
+	Rio_writen(fdProxyToServer, buf, strlen(buf)); // write -> data
+
+	n2 = Rio_readlineb(&rio2, buf2, MAXLINE); // read <- data
+	if (n2==0)
+		break;
+	fwrite("[S] ", strlen("[S] "), 1, fp); 
+	fwrite(buf2, strlen(buf2), 1, fp);
+	fflush(fp);
+	Rio_writen(connfd, buf2, strlen(buf2)); // data <- write 
     }
     Close(fdProxyToServer);
 }
